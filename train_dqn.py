@@ -64,12 +64,8 @@ def train_step(q_net, target_net, optimizer, replay_buffer, batch_size, gamma, d
     q_values = q_net(states_t).gather(1, actions_t)
 
     with torch.no_grad():
-        # Double DQN:
-        # 1) online network chooses best next action
-        next_actions = q_net(next_states_t).argmax(dim=1, keepdim=True)
-        # 2) target network evaluates that action
-        next_q_values = target_net(next_states_t).gather(1, next_actions)
-        targets = rewards_t + gamma * next_q_values * (1.0 - dones_t)
+        max_next_q = target_net(next_states_t).max(dim=1, keepdim=True)[0]
+        targets = rewards_t + gamma * max_next_q * (1.0 - dones_t)
 
     loss = nn.MSELoss()(q_values, targets)
 
@@ -86,14 +82,14 @@ def main():
     seed = int(os.environ.get("SEED", "42"))
     episodes = int(os.environ.get("TRAIN_EPISODES", "300"))
     max_steps = int(os.environ.get("MAX_STEPS", "500"))
-    batch_size = int(os.environ.get("BATCH_SIZE", "32"))
+    batch_size = int(os.environ.get("BATCH_SIZE", "64"))
     gamma = float(os.environ.get("GAMMA", "0.99"))
     lr = float(os.environ.get("LR", "0.0005"))
     buffer_capacity = int(os.environ.get("BUFFER_CAPACITY", "50000"))
-    target_update_freq = int(os.environ.get("TARGET_UPDATE_FREQ", "5"))
+    target_update_freq = int(os.environ.get("TARGET_UPDATE_FREQ", "10"))
     epsilon_start = float(os.environ.get("EPSILON_START", "1.0"))
     epsilon_end = float(os.environ.get("EPSILON_END", "0.05"))
-    epsilon_decay = float(os.environ.get("EPSILON_DECAY", "0.98"))
+    epsilon_decay = float(os.environ.get("EPSILON_DECAY", "0.995"))
 
     random.seed(seed)
     np.random.seed(seed)
@@ -157,20 +153,19 @@ def main():
 
             replay_buffer.push(state, action, reward, next_state, done)
 
-            if steps % 4 == 0:
-                loss = train_step(
-                    q_net=q_net,
-                    target_net=target_net,
-                    optimizer=optimizer,
-                    replay_buffer=replay_buffer,
-                    batch_size=batch_size,
-                    gamma=gamma,
-                    device=device,
-                )
+            loss = train_step(
+                q_net=q_net,
+                target_net=target_net,
+                optimizer=optimizer,
+                replay_buffer=replay_buffer,
+                batch_size=batch_size,
+                gamma=gamma,
+                device=device,
+            )
 
-                if loss is not None:
-                    total_loss += loss
-                    loss_count += 1
+            if loss is not None:
+                total_loss += loss
+                loss_count += 1
 
             state = next_state
             total_reward += reward

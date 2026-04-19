@@ -1,5 +1,4 @@
 import os
-import csv
 from pathlib import Path
 
 import numpy as np
@@ -27,10 +26,6 @@ def step_unpack(env, action):
     return obs, reward, terminated, truncated, info
 
 
-def ensure_dir(path: Path):
-    path.mkdir(parents=True, exist_ok=True)
-
-
 def select_board(name: str):
     return SMALL_BOARD if name.lower() == "small" else ATARI_STYLE_BOARD
 
@@ -38,7 +33,7 @@ def select_board(name: str):
 def main():
     board_name = os.environ.get("BOARD", "atari")
     episodes = int(os.environ.get("EPISODES", "10"))
-    max_steps = int(os.environ.get("MAX_STEPS", "200"))
+    max_steps = int(os.environ.get("MAX_STEPS", "500"))
     seed = int(os.environ.get("SEED", "42"))
     render = os.environ.get("RENDER", "1") not in ("0", "false", "False")
 
@@ -63,13 +58,6 @@ def main():
     model_path = Path("outputs") / "models" / f"dqn_{board_name}.pt"
     q_net.load_state_dict(torch.load(model_path, map_location=device))
     q_net.eval()
-
-    output_dir = Path("outputs")
-    logs_dir = output_dir / "logs"
-    ensure_dir(logs_dir)
-
-    eval_log_path = logs_dir / f"dqn_eval_{board_name}.csv"
-    rows = []
 
     rewards = []
 
@@ -99,47 +87,14 @@ def main():
                 print(f"Action: {action}")
                 env.render()
 
-        won = int(info["remaining_pellets"] == 0)
-
-        rows.append(
-            {
-                "episode": ep,
-                "policy": "dqn",
-                "board": board_name,
-                "total_reward": round(total_reward, 2),
-                "steps": steps,
-                "deaths": info["deaths"],
-                "remaining_pellets": info["remaining_pellets"],
-                "won": won,
-            }
-        )
-
         rewards.append(total_reward)
         print(
             f"Episode {ep} finished | reward={total_reward:.2f}, "
             f"steps={steps}, deaths={info['deaths']}, "
-            f"remaining_pellets={info['remaining_pellets']}, won={won}"
+            f"remaining_pellets={info['remaining_pellets']}"
         )
-
-    with open(eval_log_path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(
-            f,
-            fieldnames=[
-                "episode",
-                "policy",
-                "board",
-                "total_reward",
-                "steps",
-                "deaths",
-                "remaining_pellets",
-                "won",
-            ],
-        )
-        writer.writeheader()
-        writer.writerows(rows)
 
     print(f"\nAverage reward over {episodes} episodes: {np.mean(rewards):.2f}")
-    print(f"Saved DQN evaluation log to: {eval_log_path}")
 
 
 if __name__ == "__main__":
