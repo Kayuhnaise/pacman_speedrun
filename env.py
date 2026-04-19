@@ -258,7 +258,7 @@ class PacmanEnv:
 
         if self.pacman_pos in self.pellets:
             self.pellets.remove(self.pacman_pos)
-            reward += 20
+            reward += 10
 
         if self.pacman_pos in self.power_pellets:
             self.power_pellets.remove(self.pacman_pos)
@@ -299,7 +299,7 @@ class PacmanEnv:
             return self._get_obs(), 0.0, True, False, self._get_info()
 
         self.turn_count += 1
-        reward = -0.5  # step penalty to encourage speed
+        reward = -1  # step penalty to encourage speed
 
         # Move Pac-Man
         if action not in ACTION_TO_DELTA:
@@ -324,7 +324,7 @@ class PacmanEnv:
             self.scared_timer -= 1
 
         # Win / lose / timeout
-        if len(self.pellets) == 0:
+        if len(self.pellets) == 0 and len(self.power_pellets) == 0:
             reward += 1000
             self.done = True
 

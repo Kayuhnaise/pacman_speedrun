@@ -6,7 +6,7 @@ from typing import Callable, Optional
 
 import imageio.v2 as imageio
 
-from boards import ATARI_STYLE_BOARD
+from boards import ATARI_STYLE_BOARD, PAC_BOARD
 from env import PacmanEnv
 import policies
 
@@ -41,6 +41,10 @@ def save_gif(frames, out_path: Path, fps: int = 4):
 
 def get_board(board_name: str):
     board_name = (board_name or "atari").lower()
+    if board_name == "atari":
+        return ATARI_STYLE_BOARD
+    if board_name == "pac":
+        return PAC_BOARD
     return ATARI_STYLE_BOARD
 
 
@@ -212,22 +216,18 @@ if __name__ == "__main__":
         sys.exit(1)
 
     print(
-        f"Starting custom Pacman for {episodes} episodes "
+        f"Starting Pacman for {episodes} episodes "
         f"using policy={policy_name}, board={board_name}"
     )
 
-    try:
-        run(
-            policy=policy,
-            policy_name=policy_name,
-            board_name=board_name,
-            episodes=episodes,
-            max_steps=max_steps,
-            render=render,
-            seed=seed,
-            save_videos=save_videos,
-            fps=fps,
-        )
-    except Exception as e:
-        print("Error running environment:", e)
-        sys.exit(2)
+    run(
+        policy=policy,
+        policy_name=policy_name,
+        board_name=board_name,
+        episodes=episodes,
+        max_steps=max_steps,
+        render=render,
+        seed=seed,
+        save_videos=save_videos,
+        fps=fps,
+    )
