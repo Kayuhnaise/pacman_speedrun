@@ -1,0 +1,2 @@
+policy,board,episodes,avg_reward,avg_steps,avg_deaths,avg_remaining_pellets,win_rate
+mdp_policy,pac,2000,3033.03,372.93,1.15,1.53,0.894

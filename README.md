@@ -123,6 +123,14 @@ Available policies:
 * greedy_policy
 * bfs_policy
 * smart_bfs_policy
+* mdp_policy
+
+### Multiprocessing:
+Policies can be run with multiprocessing to speed up their execution with parallel_runner.py
+
+```bash
+RENDER=0 SAVE_VIDEOS=0 EPISODES=2000 BOARD=pac POLICY=mdp_policy python parallel_runner.py
+```
 
 ---
 

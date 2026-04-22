@@ -2,7 +2,6 @@ import os
 import sys
 import csv
 from pathlib import Path
-from typing import Callable, Optional
 
 import imageio.v2 as imageio
 
@@ -11,7 +10,7 @@ from env import PacmanEnv
 import policies
 
 
-def safe_reset(env, seed: Optional[int] = None):
+def safe_reset(env, seed: int = None):
     result = env.reset(seed=seed) if seed is not None else env.reset()
     if isinstance(result, tuple):
         return result
@@ -48,14 +47,72 @@ def get_board(board_name: str):
     return ATARI_STYLE_BOARD
 
 
+def _run_single_episode(
+    policy: callable,
+    env: PacmanEnv,
+    policy_name: str,
+    board_name: str,
+    episode_index: int,
+    episode_seed: int,
+    max_steps: int,
+    render: bool,
+    save_videos: bool,
+) -> tuple:
+    """
+    Run a single episode and return episode record and frames.
+    """
+    obs, info = safe_reset(env, seed=episode_seed)
+    total_reward = 0.0
+    done = False
+    steps = 0
+    frames = []
+
+    print(f"=== Episode {episode_index} | board={board_name} | policy={policy_name} ===")
+    if render:
+        env.render()
+
+    if save_videos and hasattr(env, "render_frame"):
+        frames.append(env.render_frame())
+
+    while not done and steps < max_steps:
+        action = policy(env, obs, info, steps)
+        obs, reward, terminated, truncated, info = step_unpack(env, action)
+        done = bool(terminated or truncated)
+        total_reward += float(reward)
+        steps += 1
+
+        if render:
+            print(f"Action: {action}")
+            env.render()
+
+        if save_videos and hasattr(env, "render_frame"):
+            frames.append(env.render_frame())
+
+    won = int(info["remaining_pellets"] == 0)
+
+    row = {
+        "episode": episode_index,
+        "policy": policy_name,
+        "board": board_name,
+        "total_reward": round(total_reward, 2),
+        "steps": steps,
+        "deaths": info["deaths"],
+        "remaining_pellets": info["remaining_pellets"],
+        "won": won,
+        "seed": episode_seed,
+    }
+
+    return row, frames
+
+
 def run(
-    policy: Callable,
+    policy: callable,
     policy_name: str,
     board_name: str = "atari",
     episodes: int = 3,
     max_steps: int = 500,
     render: bool = True,
-    seed: Optional[int] = None,
+    seed: int = None,
     save_videos: bool = True,
     fps: int = 4,
 ):
@@ -86,46 +143,17 @@ def run(
 
     for index in range(1, episodes + 1):
         episode_seed = seed + index if seed is not None else None
-        obs, info = safe_reset(env, seed=episode_seed)
-        total_reward = 0.0
-        done = False
-        steps = 0
-        frames = []
-
-        print(f"\n=== Episode {index} | board={board_name} | policy={policy_name} ===")
-        if render:
-            env.render()
-
-        if save_videos and hasattr(env, "render_frame"):
-            frames.append(env.render_frame())
-
-        while not done and steps < max_steps:
-            action = policy(env, obs, info, steps)
-            obs, reward, terminated, truncated, info = step_unpack(env, action)
-            done = bool(terminated or truncated)
-            total_reward += float(reward)
-            steps += 1
-
-            if render:
-                print(f"Action: {action}")
-                env.render()
-
-            if save_videos and hasattr(env, "render_frame"):
-                frames.append(env.render_frame())
-
-        won = int(info["remaining_pellets"] == 0)
-
-        row = {
-            "episode": index,
-            "policy": policy_name,
-            "board": board_name,
-            "total_reward": round(total_reward, 2),
-            "steps": steps,
-            "deaths": info["deaths"],
-            "remaining_pellets": info["remaining_pellets"],
-            "won": won,
-            "seed": episode_seed,
-        }
+        row, frames = _run_single_episode(
+            policy=policy,
+            env=env,
+            policy_name=policy_name,
+            board_name=board_name,
+            episode_index=index,
+            episode_seed=episode_seed,
+            max_steps=max_steps,
+            render=render,
+            save_videos=save_videos,
+        )
         episode_rows.append(row)
 
         if save_videos and frames:
@@ -135,11 +163,11 @@ def run(
 
         print(
             f"Episode {index} finished | "
-            f"reward={total_reward:.2f}, "
-            f"steps={steps}, "
-            f"deaths={info['deaths']}, "
-            f"remaining_pellets={info['remaining_pellets']}, "
-            f"won={won}"
+            f"reward={row['total_reward']:.2f}, "
+            f"steps={row['steps']}, "
+            f"deaths={row['deaths']}, "
+            f"remaining_pellets={row['remaining_pellets']}, "
+            f"won={row['won']}"
         )
 
     with open(episode_log_path, "w", newline="", encoding="utf-8") as f:
@@ -202,7 +230,7 @@ if __name__ == "__main__":
     episodes = int(os.environ.get("EPISODES", "5"))
     render = os.environ.get("RENDER", "1") not in ("0", "false", "False")
     max_steps = int(os.environ.get("MAX_STEPS", "500"))
-    seed_env = os.environ.get("SEED", "42")
+    seed_env = os.environ.get("SEED", "0")
     seed = int(seed_env) if seed_env is not None else None
     policy_name = os.environ.get("POLICY", "bfs_policy")
     board_name = os.environ.get("BOARD", "atari")
