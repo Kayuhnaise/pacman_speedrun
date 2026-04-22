@@ -1,0 +1,2 @@
+policy,board,episodes,avg_reward,avg_steps,avg_deaths,avg_remaining_pellets,win_rate
+bfs_policy,pac,2000,3102.84,348.98,0.99,1.33,0.957

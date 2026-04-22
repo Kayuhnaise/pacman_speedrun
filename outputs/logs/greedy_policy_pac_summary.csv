@@ -1,0 +1,2 @@
+policy,board,episodes,avg_reward,avg_steps,avg_deaths,avg_remaining_pellets,win_rate
+greedy_policy,pac,2000,843.37,500.0,0.15,123.76,0.0
