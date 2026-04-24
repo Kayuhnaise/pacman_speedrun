@@ -1,0 +1,10 @@
+# Core
+numpy>=1.23
+torch>=2.0
+
+# Data & plotting
+pandas>=2.0
+matplotlib>=3.7
+
+# Optional
+tqdm>=4.65
